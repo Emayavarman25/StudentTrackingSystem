@@ -4,7 +4,9 @@ import com.student.IdentityService.model.Users;
 
 public interface UsersCreations {
 
-    Users signUp(Users user);
-    Users signIn(Users user);
+    Users signup(Users user);
+
+    Users signIn(Users input);
+
 
 }

@@ -1,4 +1,0 @@
-package com.student.IdentityService.service;
-
-public interface UsersCreations {
-}
