@@ -1,5 +1,6 @@
 package com.student.IdentityService.jwt;
 
+import com.student.IdentityService.model.Users;
 import com.student.IdentityService.repository.UsersRepo;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,30 +19,34 @@ public class ApplicationConfiguration {
     public ApplicationConfiguration(UsersRepo userRepository) {
         this.userRepository = userRepository;
     }
+@Bean
+public UserDetailsService userDetailsService() {
+    return username -> {
+        Users user = userRepository.findByEmailWithRolesAndPrivileges(username)
+                .orElseThrow(() ->
+                        new UsernameNotFoundException("User not found"));
 
-    @Bean
-    UserDetailsService userDetailsService() {
-        return username -> userRepository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-    }
+        return new CustomUserDetails(user);
+    };
+}
 
-    @Bean
-    BCryptPasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+@Bean
+public BCryptPasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+}
 
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
+@Bean
+public AuthenticationProvider authenticationProvider() {
+    DaoAuthenticationProvider provider =
+            new DaoAuthenticationProvider(userDetailsService());
 
-    @Bean
-    AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+    provider.setPasswordEncoder(passwordEncoder());
+    return provider;
+}
 
-        authProvider.setUserDetailsService(userDetailsService());
-        authProvider.setPasswordEncoder(passwordEncoder());
-
-        return authProvider;
-    }
+@Bean
+public AuthenticationManager authenticationManager(
+        AuthenticationConfiguration configuration) throws Exception {
+    return configuration.getAuthenticationManager();
+}
 }

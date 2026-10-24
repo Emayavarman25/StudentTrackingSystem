@@ -49,6 +49,11 @@ public class JwtService {
             UserDetails userDetails,
             long expiration
     ) {
+
+        if (userDetails instanceof CustomUserDetails customUser) {
+    extraClaims.put("email", customUser.getEmail());
+    extraClaims.put("mobile", customUser.getMobile());
+}
         return Jwts
                 .builder()
                 .setClaims(extraClaims)
