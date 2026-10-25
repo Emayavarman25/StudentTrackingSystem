@@ -27,6 +27,11 @@ public class JwtService {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public Long extractUserId(String token) {
+        String userId = extractClaim(token, claims -> claims.get("userId", String.class));
+        return Long.valueOf(userId);
+    }
+
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
@@ -51,9 +56,10 @@ public class JwtService {
     ) {
 
         if (userDetails instanceof CustomUserDetails customUser) {
-    extraClaims.put("email", customUser.getEmail());
-    extraClaims.put("mobile", customUser.getMobile());
-}
+            extraClaims.put("userId", customUser.getUserId().toString());
+            extraClaims.put("email", customUser.getEmail());
+            extraClaims.put("mobile", customUser.getMobile());
+        }
         return Jwts
                 .builder()
                 .setClaims(extraClaims)
@@ -65,8 +71,15 @@ public class JwtService {
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
+        if (!(userDetails instanceof CustomUserDetails customUser)) {
+            return false;
+        }
+
         final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+        final Long userId = extractUserId(token);
+        return username.equals(userDetails.getUsername())
+                && userId.equals(customUser.getUserId())
+                && !isTokenExpired(token);
     }
 
     private boolean isTokenExpired(String token) {

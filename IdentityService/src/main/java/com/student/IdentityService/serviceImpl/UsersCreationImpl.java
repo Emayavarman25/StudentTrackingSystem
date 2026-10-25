@@ -6,16 +6,19 @@ import com.student.IdentityService.model.Users;
 import com.student.IdentityService.repository.RoleRepo;
 import com.student.IdentityService.repository.UsersRepo;
 import com.student.IdentityService.request.UserCreationRequest;
+import com.student.IdentityService.response.LoginResponse;
+import com.student.IdentityService.response.UserResponse;
 
-import java.util.HashSet;
-import java.util.Set;
-
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class UsersCreationImpl {
@@ -36,49 +39,51 @@ public class UsersCreationImpl {
     private final JwtService jwtService;
 
 
-    public String createUser(UserCreationRequest userCreaionRequest) {
+    @Transactional
+    public UserResponse createUser(UserCreationRequest request) {
+        String email = request.email().trim().toLowerCase();
+        String mobile = request.mobileNumber().trim();
 
-        try {
-            if (userRepository.existsByEmail(userCreaionRequest.email())
-                    || userRepository.existsByMobile(userCreaionRequest.mobileNumber())) {
-                throw new RuntimeException("User with email " + userCreaionRequest.email() + " or mobile number "
-                        + userCreaionRequest.mobileNumber() + " already exists.");
-            }
-
-            Users user = new Users();
-            user.setUsername(userCreaionRequest.firstName());
-            user.setEmail(userCreaionRequest.email());
-            user.setPassword(passwordEncoder.encode(userCreaionRequest.password()));
-            user.setMobile(userCreaionRequest.mobileNumber());
-            Role role = roleRepository.findByName("PLATFORM_ADMIN")
-                    .orElseThrow(() -> new IllegalArgumentException("Role not found"));
-
-            Set<Role> roles = new HashSet<>();
-            roles.add(role);
-            user.setRoles(roles);
-            userRepository.save(user);
-            return "User created successfully";
-
-        } catch (Exception e) {
-         return    "Error creating user: " + e.getMessage();
+        if (userRepository.existsByEmail(email)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already registered");
+        }
+        if (userRepository.existsByMobile(mobile)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Mobile number is already registered");
         }
 
+        Role defaultRole = roleRepository.findByName("ROLE_USER")
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Default user role is not initialized"));
+
+        Users user = new Users();
+        String firstName = request.firstName().trim();
+        String lastName = request.lastName() == null ? "" : request.lastName().trim();
+        user.setUsername((firstName + " " + lastName).trim());
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(request.password()));
+        user.setMobile(mobile);
+        user.getRoles().add(defaultRole);
+
+        Users savedUser = userRepository.save(user);
+        return new UserResponse(
+                savedUser.getId(),
+                savedUser.getUsername(),
+                savedUser.getEmail(),
+                savedUser.getMobile(),
+                savedUser.getRoles().stream().map(Role::getName).toList());
     }
 
 
-    public String LoginUser(String email, String password) {
+    public LoginResponse LoginUser(String identifier, String password) {
         try {
-            System.out.println(
-    "AuthenticationManager: " + authenticationManager
-);
-                Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(email, password));
-                UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-                String jwt = jwtService.generateToken(userDetails);
-
-            return  jwt;
-        } catch (Exception e) {
-            return "Error logging in user: " + e.getMessage();
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(identifier, password));
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            String jwt = jwtService.generateToken(userDetails);
+            return new LoginResponse(jwt, "Bearer", jwtService.getExpirationTime() / 1000);
+        } catch (AuthenticationException exception) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
     }
 

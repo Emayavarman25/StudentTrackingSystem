@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 import com.student.IdentityService.jwt.CustomUserDetails;
-import com.student.IdentityService.model.Organization;
 import com.student.IdentityService.request.CreateOrganizationRequest;
+import com.student.IdentityService.response.OrganizationResponse;
 import com.student.IdentityService.service.OrganizationService;
 import jakarta.validation.Valid;
 
@@ -26,17 +26,17 @@ public class OrganizationsController {
     }
 
     @PostMapping("/createOrganization")
-    public ResponseEntity<Organization> createOrganization(
+    public ResponseEntity<OrganizationResponse> createOrganization(
             @Valid @RequestBody CreateOrganizationRequest request,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
-        Organization organization = organizationService.createOrganization(request, currentUser.getUserId());
+        OrganizationResponse organization = organizationService.createOrganization(request, currentUser.getUserId());
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(organization);
     }
 
     @GetMapping("/getorganizations")
-    public ResponseEntity<List<Organization>> getOrganizations(
+    public ResponseEntity<List<OrganizationResponse>> getOrganizations(
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(organizationService.getOrganizationsForUser(currentUser.getUserId()));
     }

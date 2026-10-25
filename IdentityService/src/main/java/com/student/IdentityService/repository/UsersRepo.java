@@ -10,6 +10,7 @@ import java.util.Optional;
 public interface UsersRepo extends JpaRepository<Users, Long> {
     Optional<Users> findByUsername(String username);
     Optional<Users> findByEmail(String email);
+    Optional<Users> findByEmailOrMobile(String email, String mobile);
     boolean existsByEmail(String email);
     boolean existsByMobile(String mobile);
 
@@ -18,9 +19,9 @@ public interface UsersRepo extends JpaRepository<Users, Long> {
     FROM Users u
     LEFT JOIN FETCH u.roles r
     LEFT JOIN FETCH r.privileges
-    WHERE u.email = :email
+    WHERE u.email = :identifier OR u.mobile = :identifier
     """)
-Optional<Users> findByEmailWithRolesAndPrivileges( @Param("email") String email);
+    Optional<Users> findByIdentifierWithRolesAndPrivileges(@Param("identifier") String identifier);
 
 
 

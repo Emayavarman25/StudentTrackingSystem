@@ -1,0 +1,24 @@
+USER
+  |
+  v
+AUTHENTICATION
+  |
+  |---- JWT verifies identity
+  |
+  v
+ORGANIZATION MEMBERSHIPS
+  |
+  |---- School -> PARENT
+  |
+  |---- Music Academy -> TEACHER
+  |
+  v
+ROLE
+  |
+  v
+PRIVILEGES
+  |
+  v
+AUTHORIZED API OPERATION
+
+Best first milestone: create two children under one parent account, enroll each in a different organization, and ensure the parent can switch between them while never seeing data they are not authorized to access.
